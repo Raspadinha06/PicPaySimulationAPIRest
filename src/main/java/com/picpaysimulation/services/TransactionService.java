@@ -5,14 +5,9 @@ import com.picpaysimulation.domain.user.User;
 import com.picpaysimulation.dtos.TransactionDTO;
 import com.picpaysimulation.repositories.TransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Map;
 
 @Service
 public class TransactionService {
@@ -23,10 +18,10 @@ public class TransactionService {
     private TransactionRepository repository;
 
     @Autowired
-    private RestTemplate restTemplate;
+    private NotificationService notificationService;
 
     @Autowired
-    private NotificationService notificationService;
+    private AuthorizationService authorizationService;
 
     public Transaction createTransaction(TransactionDTO transaction) throws Exception {
         User sender = this.userService.findUserbyId(transaction.senderId());
@@ -34,7 +29,7 @@ public class TransactionService {
 
         userService.validateTransaction(sender, transaction.value());
 
-        boolean isAuthorized = this.authorizeTransaction(sender, transaction.value());
+        boolean isAuthorized = authorizationService.authorizeTransaction(sender, transaction.value());
         if(!isAuthorized){
             throw new Exception("Transação não autorizada.");
         }
@@ -58,13 +53,4 @@ public class TransactionService {
         return newTransaction;
     }
 
-    public boolean authorizeTransaction(User sender, BigDecimal value){
-        String url = "https://run.mocky.io/v3/5794d450-d2e2-4412-8131-73d0293ac1cc";
-        ResponseEntity<Map> authorizationResponse = restTemplate.getForEntity(url, Map.class);
-
-        if(authorizationResponse.getStatusCode() == HttpStatus.OK){
-            String message = (String) authorizationResponse.getBody().get("message");
-            return "Autorizado".equalsIgnoreCase(message);
-        } else return false;
-    }
 }
